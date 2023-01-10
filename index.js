@@ -279,6 +279,11 @@ class WhatsappCloud {
     async sendSimpleButtons({ recipientPhone, message, listOfButtons }) {
         this._mustHaveMessage(message);
         this._mustHaverecipientPhone(recipientPhone);
+        
+        if(!listOfButtons) throw new Error('listOfButtons cannot be empty');
+        if(listOfButtons.length > 3) throw new Error('listOfButtons cannot be bigger than 3 elements');
+
+
         let validButtons = listOfButtons
             .map((button) => {
                 if (!button.title) {
@@ -307,10 +312,6 @@ class WhatsappCloud {
                 };
             })
             .filter(Boolean);
-
-        if (validButtons.length === 0) {
-            throw new Error('"listOfButtons" is required in making a request');
-        }
 
         let body = {
             messaging_product: 'whatsapp',
@@ -858,7 +859,39 @@ class WhatsappCloud {
         return response;
     }
 
-    async sendSticker({ message, recipientPhone }) {}
+    async sendSticker({ recipientPhone, caption, file_path, file_name, url }) {
+        this._mustHaverecipientPhone(recipientPhone);
+        if (!file_path && !url) {
+            throw new Error('You must provide a sticker in your "file_path" or a sticker in a publicly available "url"');
+        }
+
+        let body = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: recipientPhone,
+            type: 'sticker',
+            sticker: {
+                caption: caption || "",
+            }
+        };
+        if (file_path) {
+            let uploadedSticker = await this._uploadMedia({
+                file_path,
+                file_name,
+            });
+            body['sticker']['id'] = uploadedSticker.media_id;
+        } else {
+            body['sticker']['link'] = url;
+        }
+
+        let response = await this._fetchAssistant({
+            url: '/messages',
+            method: 'POST',
+            body,
+        });
+
+        return response;
+    }
 
     async getUserProfile({ recipientPhone }) {}
 
